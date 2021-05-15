@@ -43,6 +43,11 @@ from evcouplings.align.ena import (
 )
 
 
+from evcouplings.visualize.taxa import (
+    get_taxa,
+    sunburst
+)
+
 def _verify_sequence_id(sequence_id):
     """
     Verify if a target sequence identifier is in proper
@@ -708,7 +713,19 @@ def existing(**kwargs):
         annotation = extract_header_annotation(
             ali_raw, from_annotation=from_anno_line
         )
+
         annotation.to_csv(annotation_file, index=False)
+        
+        ### sunburst plot
+        annotation_tax_file = prefix + "_annotation_tax.csv"
+        annotation_diversity_plot = prefix + "_diversity.html"
+
+        annotation_with_tax = get_taxa(annotation)
+        annotation_with_tax.to_csv(index=False)
+        
+        fig = sunburst(annotation_with_tax, prefix)
+        fig.write_html(annotation_diversity_plot)
+
 
     # Target sequence of alignment
     sequence_id = kwargs["sequence_id"]
