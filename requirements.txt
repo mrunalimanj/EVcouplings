@@ -15,3 +15,5 @@ biopython
 seaborn
 billiard
 sklearn
+plotly
+ete3
