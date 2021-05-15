@@ -7,7 +7,7 @@ Authors:
 import pandas as pd
 import plotly.express as px
 
-from ete3 import NCBITaxa # another import?
+from ete3 import NCBITaxa # another import? can I do this with plotly
 
 
 def load_taxonomy_lineage(tax_ids):
@@ -71,7 +71,7 @@ def load_taxonomy_lineage(tax_ids):
     return pd.DataFrame.from_dict(rank_sequencevalue_hm)
 
 
-def get_taxa(annotations):
+def get_taxa(annotation):
 	"""
 	Helper function for loading taxa from an DataFrame of annotations.
 
@@ -84,49 +84,56 @@ def get_taxa(annotations):
 
     Returns
     -------
-    annotations: pd.DataFrame
+    annotation: pd.DataFrame
     	Original annotations alignment but with taxanomic 
     	information for each entry of the alignment. 
     """
     
-    df['tax_ID'] = df['Tax'].str.split('=').str[-1]
+    annotation['tax_ID'] = annotation['Tax'].str.split('=').str[-1]
     ncbi = NCBITaxa()
+
+    taxs = loadTaxonomyLineage(annotation['tax_ID'].unique().tolist())
     
-    taxs = loadTaxonomyLineage(df['tax_ID'].unique().tolist())
-    
-    taxs = pd.concat([pd.Series(df['tax_ID'].unique(), name='tax_ID'),
+    taxs = pd.concat([pd.Series(annotation['tax_ID'].unique(), name='tax_ID'),
                   taxs], axis=1)
-    df = df.merge(taxs, on='tax_ID',how='left')
+    annotation = annotation.merge(taxs, on='tax_ID',how='left')
     
-    return df
+    return annotation
 
 
 
-def sunburst(annotation, title, hier=['superkingdom', "phylum","order"]):
+def sunburst(annotation, title, hier=['superkingdom', "phylum", "order"]):
 	"""
 	Generates sunburst plot from annotation dataframe.
 
     Parameters
     ----------
-    annotations: pd.DataFrame
+    annotation: pd.DataFrame
     	Original annotations alignment but with taxanomic 
     	information for each entry of the alignment. 
-    hier : Python list
-        1D list of NCBI Taxonomy IDs.
+    title : Python string 
+        Name for plot, to be passed to plotly. 
 
+    hier : Python list
+        1D list of desired ranks to include in the plot. 
+        These should be ordered from highest to lowest rank desired, 
+        and must begin with `superkingdom`, so as to color the top rank
+        entries systematically for straightforward comparison between alignments. 
+        The ordering of ranks provided by NCBI:
+        ['superkingdom', "phylum","genus","class", "subphylum", "family", "order"]
 
     Returns
     -------
-    annotations: pd.DataFrame
-    	Original annotations alignment but with taxanomic 
+    annotation: pd.DataFrame
+    	Original annotations alignment DataFrame but with taxanomic 
     	information for each entry of the alignment. 
     """
     
-
-
-    # ['superkingdom', "phylum","genus","class", "subphylum", "family", "order"]
-    for rank in hier:
-        annotation = annotation[(annotation[rank].notnull()) & (annotation[rank] != None)]
+    # plotly will throw an error if any intermediate rank entries are empty, so 
+    # we must filter the annotation DataFrame to include only rows which 
+    # have entries for all the intermediate ranks. 
+    for rank in hier[:-1]:
+        annotation = annotation[(annotation[rank].notnull())]
     
     fig = px.sunburst(annotation, path=hier, values='n', 
     				  title = title, color="superkingdom",
