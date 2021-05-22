@@ -17,6 +17,11 @@
 # 3) All settings are explicitly specified here. No hidden defaults in code.
 # 4) Each stage is also passed the parameters in the "databases" and "tools" sections
 
+
+# TODO: add code for the kwargs you have. 
+# TODO: think about how this might be useful for complex runs! 
+# What if one alignment is really poor/not diverse? Think about useful ways of comparison
+
 pipeline: protein_complex
 
 # which stages of workflow to run. Uncomment downstream stages using # (however, no stage can be run before the previous

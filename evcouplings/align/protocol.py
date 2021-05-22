@@ -716,14 +716,24 @@ def existing(**kwargs):
 
         annotation.to_csv(annotation_file, index=False)
         
-        ### sunburst plot
+        ### sunburst plot --- put in a plot_sunburst keyword argument, add it into align stage of config file
+        
+
+        # kwargs for file names that are represented in the config file
         annotation_tax_file = prefix + "_annotation_tax.csv"
+
+        # save also as pdf
+
         annotation_diversity_plot = prefix + "_diversity.html"
 
         annotation_with_tax = get_taxa(annotation)
-        annotation_with_tax.to_csv(index=False)
+
+        # should I save both? TODO ask Thomas
+        annotation_with_tax.to_csv(annotation_tax_file, index=False)
         
         fig = sunburst(annotation_with_tax, prefix)
+
+        # also do PDF
         fig.write_html(annotation_diversity_plot)
 
 

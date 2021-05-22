@@ -16,6 +16,7 @@
 # 3) All settings are explicitly specified here. No hidden defaults in code.
 # 4) Each stage is also passed the parameters in the "databases" and "tools" sections
 
+# TODO: add code for the kwargs you have. 
 pipeline: protein_monomer
 
 # which stages of workflow to run. Uncomment downstream stages using # (however, no stage can be run before the previous
