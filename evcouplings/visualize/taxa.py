@@ -14,6 +14,17 @@ from ete3 import NCBITaxa # another import? can I do this with biopython, which 
 # TODO: see if BioPython has similar capability/ is just as reliable
 # TODO: see if timing is similar for code. How does it scale?
 
+COLOR_DISCRETE_MAP =    {'Bacteria':'#56B4E9',  # blue
+                        'Eukaryota':'#D53500',  # red
+                        'Archaea':'#E69F00',    # orange
+                        'Viruses': '#AB63FA',   # purple
+                        'Other': '#189e3c'}     # green
+
+SUNBURST_HIERARCHY = ['superkingdom', "phylum", "order"]
+
+PATH_TO_NCBI_TAXA_DATABASE = "/n/groups/marks/databases/etetoolkit/taxa.sqlite" # TODO: add to O2
+
+
 def load_taxonomy_lineage(tax_ids, ncbi):
     """
     Using NCBITaxa, querying all the taxonomic information on the 
@@ -27,8 +38,8 @@ def load_taxonomy_lineage(tax_ids, ncbi):
 
     ncbi : NCBITaxa() instance
         An instance that only gets created if get_taxa gets called; that is, the
-        the user wants to create sunburst plots
-
+        the user wants to query the taxonomic ranks for a set of sequences 
+        to visualize species diversity or for other purposes. 
 
 
     Returns
@@ -47,7 +58,6 @@ def load_taxonomy_lineage(tax_ids, ncbi):
 
     """
     # TODO: update the docstring
-    # TODO: Also, lol I should probably think about making tax data and sunburst plots independent!
 
     rank_sequencevalue_hm = { # columns of a DataFrame that will get added to the annotation.
         'superkingdom': [],
@@ -84,7 +94,7 @@ def load_taxonomy_lineage(tax_ids, ncbi):
     return pd.DataFrame.from_dict(rank_sequencevalue_hm)
 
 
-def get_taxa(annotation):
+def get_taxa(annotation, format, database_file=PATH_TO_NCBI_TAXA_DATABASE):
     """
     Helper function for loading taxa from an DataFrame of annotations.
 
@@ -93,7 +103,13 @@ def get_taxa(annotation):
     ----------
     tax_ids : Python list
         1D list of NCBI Taxonomy IDs.
-
+    format : {"fasta", "stockholm", None}
+        Format of alignment, None if not detectable
+        if stockholm, annotation file should include taxids
+        if fasta: #TODO: what happens when it's fasta? is
+            file difference enough to figure out whether or not taxids will be included
+    database_file : string
+        TODO: # dbfile="/path/to/taxa.sqlite" 
 
     Returns
     -------
@@ -101,20 +117,25 @@ def get_taxa(annotation):
         Original annotations alignment but with taxanomic 
         information for each entry of the alignment. 
     """
-    
+    if format != "stockholm":
+        pass
+        # TODO: Fix the formatting
+
     annotation['tax_ID'] = annotation['Tax'].str.split('=').str[-1]
     # TODO: check whether these columns are the same for 
     # uniprot vs uniref vs metagenomics: 
     # do the Tax IDs always get represented in this format?
 
-    # TODO: try/except for error checks - are these all numbers, basically? etc
+    # "Extract Uniprot/Uniref sequence annotation from Stockholm file
+    #(as output by jackhmmer). This function may not work for other
+    #formats."
+
+    # TODO: try/except for error checks - are these all numbers, basically? etc 
     # TODO: have column name be pulled properly based on the type of pipeline being used
     # pull in that name properly so as to be consistent with database used and 
     # other config settings, based on `extract_header_annotation` function.
 
-    ncbi = NCBITaxa()  # dbfile="/path/to/taxa.sqlite"
-
-    # also taxdump_file=None. https://github.com/etetoolkit/ete/blob/master/ete3/ncbi_taxonomy/ncbiquery.py
+    ncbi = NCBITaxa(taxdump=database_file)  
     # TODO: figure out where this ends up getting downloaded, and
     # make sure it downloads once! can make it similar to SIFTS.py
     # TODO: set path with global variable.
@@ -132,15 +153,13 @@ def get_taxa(annotation):
     return annotation
 
 
+def sunburst(annotation, title, hier=SUNBURST_HIERARCHY, color_map=COLOR_DISCRETE_MAP):
 
-def sunburst(annotation, title, hier=['superkingdom', "phylum", "order"], ):
     # keyword argument for hier if confident?
     # other category: very specific colors, you should allow them to pass in colors
     # colormap=...
     # e.g. for contact maps, at the top - global variables w/ color defaults, but can be modified
     # set defaults as global variables/dictionaries
-
-
 
     """
     Generates sunburst plot from annotation dataframe.
@@ -159,35 +178,30 @@ def sunburst(annotation, title, hier=['superkingdom', "phylum", "order"], ):
         and must begin with `superkingdom`, so as to color the top rank
         entries systematically for straightforward comparison between alignments. 
         The ordering of ranks provided by NCBI:
-        ['superkingdom', "phylum","genus","class", "subphylum", "family", "order"]
-    ...
-
+        ['superkingdom', "phylum", "genus", "class", "subphylum", "family", "order"]
+    color_map : dictionary
+        A mapping to colors for the top rank. 
 
     Returns
     -------
     fig : Plotly figure
-        Sunburst plot instance. Can visualize figure with fig.show(), or saving to HTML 
-        and then opening HTML output in a browser of your choice. 
+        Sunburst plot instance. Can visualize figure with fig.show() in a Jupyter 
+        notebook, or saving to HTML using fig.write_html(filepath) and then 
+        opening HTML output in a browser of your choice. 
     """
-    
-    # plotly will throw an error if any intermediate rank entries are empty, so 
-    # we must filter the annotation DataFrame to include only rows which 
-    # have entries for all the intermediate ranks. 
 
-    annotation["count"] = 1 # a helper column for providing "counts" to plotting function.
+    # plotly will throw an error if any intermediate rank entries are empty, so 
+    # we must fill in the empty intermediate ranks so as not to lose any hits. 
     annotation.fillna("Other", inplace = True) # for purposes of filling in empty intermediate ranks.
+    
+    annotation["count"] = 1 # a helper column for providing "counts" to plotting function.
     # my alignments were comparatively small. what happens when it gets big?
     # TODO: try running ur code on bigger alignments (think 1-2 GB).
     
     fig = px.sunburst(annotation, path=hier, values='count', 
                       title = title, color=hier[0],
-                      color_discrete_map={'Bacteria':'#3366CC', 
-                                          'Eukaryota':'#EF553B', 
-                                          'Archaea':'#FF6692', 
-                                          'Viruses': '#AB63FA'}) 
-                                          
-    # TODO: make color discrete map a global variable, but set it to this setup.
-
+                      color_discrete_map=color_map) 
+                                        
     return fig
        
 

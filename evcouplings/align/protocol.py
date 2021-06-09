@@ -456,7 +456,7 @@ def extract_header_annotation(alignment, from_annotation=True):
 
         # extract info from line if we got one
         if anno is not None:
-            # do split on known field names o keep things
+            # do split on known field names to keep things
             # simpler than a gigantic full regex to match
             # (some fields are allowed to be missing)
             pairs = re.split(regex, anno)
@@ -600,7 +600,7 @@ def describe_coverage(alignment, prefix, first_index, minimum_column_coverage):
             threshold /= 100
 
         # all positions that have enough sequence information (i.e. little gaps),
-        # and their indeces
+        # and their indices
         uppercase = f_gap <= 1 - threshold
         uppercase_idx = np.nonzero(uppercase)[0]
 
@@ -715,26 +715,25 @@ def existing(**kwargs):
         )
 
         annotation.to_csv(annotation_file, index=False)
+
+        if kwargs["taxa_annotation"]:
+            # TODO: kwargs for file names that are represented in the config file
+            annotation_tax_file = prefix + "_annotation_tax.csv"
+
+            annotation_with_tax = get_taxa(annotation, format=format)
+            # saving it separately since I don't want to break previous code written for annotation.csv
+            annotation_with_tax.to_csv(annotation_tax_file, index=False)
         
-        ### sunburst plot --- put in a plot_sunburst keyword argument, add it into align stage of config file
-        
+        if kwargs["taxa_annotation"] and kwargs["plot_sunburst_diversity"]:
+            # TODO: kwargs for file names that are represented in the config file
+            annotation_diversity_plot_html = prefix + "_diversity_plot.html"
+            annotation_diversity_plot_pdf = prefix + "_diversity_plot.pdf"
 
-        # kwargs for file names that are represented in the config file
-        annotation_tax_file = prefix + "_annotation_tax.csv"
+            # TODO: other kwargs:
+            fig = sunburst(annotation_with_tax, title=prefix)
 
-        # save also as pdf
-
-        annotation_diversity_plot = prefix + "_diversity.html"
-
-        annotation_with_tax = get_taxa(annotation)
-
-        # should I save both? TODO ask Thomas
-        annotation_with_tax.to_csv(annotation_tax_file, index=False)
-        
-        fig = sunburst(annotation_with_tax, prefix)
-
-        # also do PDF
-        fig.write_html(annotation_diversity_plot)
+            fig.write_image(annotation_diversity_plot_pdf)
+            fig.write_html(annotation_diversity_plot_html)
 
 
     # Target sequence of alignment
@@ -1721,6 +1720,8 @@ def run(**kwargs):
         * focus_sequence
         * segments
     """
+    # TODO: add the kwargs you will be making here
+
     check_required(kwargs, ["protocol"])
 
     if kwargs["protocol"] not in PROTOCOLS:

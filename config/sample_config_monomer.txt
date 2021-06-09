@@ -16,7 +16,6 @@
 # 3) All settings are explicitly specified here. No hidden defaults in code.
 # 4) Each stage is also passed the parameters in the "databases" and "tools" sections
 
-# TODO: add code for the kwargs you have. 
 pipeline: protein_monomer
 
 # which stages of workflow to run. Uncomment downstream stages using # (however, no stage can be run before the previous
@@ -113,6 +112,14 @@ align:
     # Create a file with extracted annotation from UniRef/UniProt sequence FASTA headers
     extract_annotation: True
     cpu:
+    
+    # Create a separate annotation file that includes taxanomic ranks.
+    # If you set this to True, make sure to also set extract_annotation to True.
+    taxa_annotation: True
+    # Create an interactive sunburst plot displaying the taxonomic diversity of the sequences pulled in.
+    plot_sunburst_diversity: True
+    #TODO: other kwargs
+    
 
     # set to True to turn of jackhmmer bias correction
     nobias: False
@@ -120,7 +127,7 @@ align:
     # if align stage has been run previously, reuse the generated raw sequence alignment coming out of jackhmmer
     reuse_alignment: True
 
-    # create checkpoint files of HMM and aligment after each iteration
+    # create checkpoint files of HMM and alignment after each iteration
     checkpoints_hmm: False
     checkpoints_ali: False
 
@@ -138,6 +145,9 @@ align:
 #    minimum_sequence_coverage: 50
 #    minimum_column_coverage: 70
 #    extract_annotation: True
+#    taxa_annotation: True
+#    plot_sunburst_diversity: True
+    
 
 # Inference of evolutionary couplings from sequence alignment
 couplings:
