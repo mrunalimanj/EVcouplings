@@ -2,17 +2,14 @@
 Taxonomy diversity visualization
 
 Authors:
-  ???? (load_taxonomy_lineage)
+  Nicole Thadani (load_taxonomy_lineage)
   Mrunali Manjrekar
 """
 
 import pandas as pd
 import plotly.express as px
 
-from ete3 import NCBITaxa # another import? can I do this with biopython, which might be lighter
-# makes more sense to have the database since you're doing thousands of lookups, though
-# TODO: see if BioPython has similar capability/ is just as reliable
-# TODO: see if timing is similar for code. How does it scale?
+from ete3 import NCBITaxa # another import
 
 COLOR_DISCRETE_MAP =    {'Bacteria':'#56B4E9',  # blue
                         'Eukaryota':'#D53500',  # red
@@ -58,40 +55,39 @@ def load_taxonomy_lineage(tax_ids, ncbi):
 
     """
     # TODO: update the docstring
+    ranks = ['superkingdom', 
+            'phylum', 
+            'genus', 
+            'class', 
+            'subphylum', 
+            'family', 
+            'order', 
+            'species']
 
-    rank_sequencevalue_hm = { # columns of a DataFrame that will get added to the annotation.
-        'superkingdom': [],
-        'phylum': [],
-        'genus': [],
-        'class': [],
-        'subphylum': [],
-        'family': [],
-        'order': [],
-        'species': [],
-    }
+    taxs = []
+
     for tax_id in tax_ids:
         try:
             lineage = ncbi.get_lineage(int(tax_id))
-            lineageid_name_dict = ncbi.get_taxid_translator(lineage) 
+            name_dict = ncbi.get_taxid_translator(lineage) 
             # dict: key=lineageid, value=sequence value
             
-            lineageid_rank_dict = ncbi.get_rank(lineage)
+            rank_dict = ncbi.get_rank(lineage)
             # flipping the keys and entries of the dictionary.
-            rank_lineageid_dict = dict((v,k) for k,v in lineageid_rank_dict.items())
+            lineage_dict = dict((rank_dict[i], name_dict[i]) for i in lineage)
 
-            for rank in rank_sequencevalue_hm:
-                sequence_value_for_rank = None
-                if rank in rank_lineageid_dict:
-                    lineageid = rank_lineageid_dict[rank]
-                    sequence_value_for_rank = lineageid_name_dict[lineageid]
-                rank_sequencevalue_hm[rank].append(
-                    sequence_value_for_rank
-                )
+            lineage_dict = {k: lineage_dict[k] for k in tax_ranks if k in lineage_dict}
+
+            # add at end so that it doesn't get prematurely added. 
+            lineage_dict['tax_ID'] = tax_id
+
+            taxs.append(lineage_dict)
+
         except ValueError as e:
             print('Warning: {0}'.format(str(e)))
             # TODO: consider whether you should adjust this depending on database type.
             # TODO: create test cases? hm
-    return pd.DataFrame.from_dict(rank_sequencevalue_hm)
+    return pd.DataFrame.from_dict(taxs)
 
 
 def get_taxa(annotation, format, database_file=PATH_TO_NCBI_TAXA_DATABASE):
@@ -138,7 +134,6 @@ def get_taxa(annotation, format, database_file=PATH_TO_NCBI_TAXA_DATABASE):
     ncbi = NCBITaxa(taxdump=database_file)  
     # TODO: figure out where this ends up getting downloaded, and
     # make sure it downloads once! can make it similar to SIFTS.py
-    # TODO: set path with global variable.
 
     # TODO: should this be integrated w/ update_database.py?
     # doesn't have to be called in there but can be stored there
@@ -146,8 +141,7 @@ def get_taxa(annotation, format, database_file=PATH_TO_NCBI_TAXA_DATABASE):
     tax_ids = annotation['tax_ID'].unique().tolist()
 
     taxs = load_taxonomy_lineage(tax_ids, ncbi)
-    
-    taxs = pd.concat([pd.Series(tax_ids, name='tax_ID'), taxs], axis=1)
+
     annotation = annotation.merge(taxs, on='tax_ID', how='left')
     
     return annotation
@@ -195,8 +189,6 @@ def sunburst(annotation, title, hier=SUNBURST_HIERARCHY, color_map=COLOR_DISCRET
     annotation.fillna("Other", inplace = True) # for purposes of filling in empty intermediate ranks.
     
     annotation["count"] = 1 # a helper column for providing "counts" to plotting function.
-    # my alignments were comparatively small. what happens when it gets big?
-    # TODO: try running ur code on bigger alignments (think 1-2 GB).
     
     fig = px.sunburst(annotation, path=hier, values='count', 
                       title = title, color=hier[0],
