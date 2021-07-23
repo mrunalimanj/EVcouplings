@@ -76,7 +76,7 @@ def load_taxonomy_lineage(tax_ids, ncbi):
             # flipping the keys and entries of the dictionary.
             lineage_dict = dict((rank_dict[i], name_dict[i]) for i in lineage)
 
-            lineage_dict = {k: lineage_dict[k] for k in tax_ranks if k in lineage_dict}
+            lineage_dict = {k: lineage_dict[k] for k in ranks if k in lineage_dict}
 
             # add at end so that it doesn't get prematurely added. 
             lineage_dict['tax_ID'] = tax_id
@@ -90,16 +90,18 @@ def load_taxonomy_lineage(tax_ids, ncbi):
     return pd.DataFrame.from_dict(taxs)
 
 
-def get_taxa(annotation, format, database_file=PATH_TO_NCBI_TAXA_DATABASE):
+def get_taxa(annotation, aln_format, database_file=PATH_TO_NCBI_TAXA_DATABASE):
     """
     Helper function for loading taxa from an DataFrame of annotations.
 
 
     Parameters
     ----------
-    tax_ids : Python list
-        1D list of NCBI Taxonomy IDs.
-    format : {"fasta", "stockholm", None}
+
+    annotation : pd.DataFrame
+        annotation.csv from EVcouplings align stage. 
+        
+    aln_format : {"fasta", "stockholm", None}
         Format of alignment, None if not detectable
         if stockholm, annotation file should include taxids
         if fasta: #TODO: what happens when it's fasta? is
@@ -110,10 +112,10 @@ def get_taxa(annotation, format, database_file=PATH_TO_NCBI_TAXA_DATABASE):
     Returns
     -------
     annotation: pd.DataFrame
-        Original annotations alignment but with taxanomic 
-        information for each entry of the alignment. 
+        Original annotations alignment, modified to include taxanomic 
+        information for each sequence of the alignment. 
     """
-    if format != "stockholm":
+    if aln_format != "stockholm":
         pass
         # TODO: Fix the formatting
 
@@ -131,7 +133,7 @@ def get_taxa(annotation, format, database_file=PATH_TO_NCBI_TAXA_DATABASE):
     # pull in that name properly so as to be consistent with database used and 
     # other config settings, based on `extract_header_annotation` function.
 
-    ncbi = NCBITaxa(taxdump=database_file)  
+    ncbi = NCBITaxa(dbfile=database_file)  
     # TODO: figure out where this ends up getting downloaded, and
     # make sure it downloads once! can make it similar to SIFTS.py
 
@@ -179,9 +181,13 @@ def sunburst(annotation, title, hier=SUNBURST_HIERARCHY, color_map=COLOR_DISCRET
     Returns
     -------
     fig : Plotly figure
-        Sunburst plot instance. Can visualize figure with fig.show() in a Jupyter 
-        notebook, or saving to HTML using fig.write_html(filepath) and then 
-        opening HTML output in a browser of your choice. 
+        Sunburst plot instance. 
+        Options for visualization:
+            You can visualize in-notebook with fig.show() in a Jupyter notebook.
+            You can also save to HTML using fig.write_html(filepath) for an interactive plot
+            that can be opened in a browser of your choice. 
+            For a static image of the plot, you can use fig.write_image(filepath) 
+            with any preferred extension of your choice (JPG, PNG, JPEG, SVG, PDF, etc).
     """
 
     # plotly will throw an error if any intermediate rank entries are empty, so 
